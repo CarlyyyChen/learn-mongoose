@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document, Model, FilterQuery } from 'mongoose';
-import Author, { IAuthor } from './author';
-import Genre, { IGenre } from './genre';
+import mongoose, { Schema, Document, Model, FilterQuery } from "mongoose";
+import Author, { IAuthor } from "./author";
+import Genre, { IGenre } from "./genre";
 
 /**
  * A type that represents a book document in the books collection.
@@ -21,7 +21,12 @@ export interface IBook extends Document {
   summary: string;
   isbn: string;
   genre: IGenre[];
-  saveBookOfExistingAuthorAndGenre(author_family_name: string, author_first_name: string, genre_name: string, title: string): Promise<IBook>;
+  saveBookOfExistingAuthorAndGenre(
+    author_family_name: string,
+    author_first_name: string,
+    genre_name: string,
+    title: string
+  ): Promise<IBook>;
 }
 
 /**
@@ -34,8 +39,12 @@ export interface IBook extends Document {
  * @property {Function} getBookCount - A function to get the count of books.
  */
 interface IBookModel extends Model<IBook> {
-  getAllBooksWithAuthors(projectionOpts: string, sortOpts?: { [key: string]: 1 | -1 }): Promise<IBook[]>;
-  getBookCount(fitler?: FilterQuery<IBook>): Promise<number>;
+  getBook(id: string): Promise<IBook | null>;
+  getAllBooksWithAuthors(
+    projectionOpts: string,
+    sortOpts?: { [key: string]: 1 | -1 }
+  ): Promise<IBook[]>;
+  getBookCount(fitler?: FilterQuery<IBook>): Promise<number>; // return a promise
 }
 
 /**
@@ -48,70 +57,94 @@ interface IBookModel extends Model<IBook> {
  * @property {string} isbn - The ISBN of the book.
  * @property {Schema.Types.ObjectId[]} genre - The list of genre ids of the book. It references the genre collection.
  */
-const BookSchema: Schema<IBook> = new Schema(
-  {
-    title: { type: String, required: true },
-    author: { type: Schema.Types.ObjectId, ref: 'Author', required: true },
-    summary: { type: String, required: true },
-    isbn: { type: String, required: true },
-    genre: [{ type: Schema.Types.ObjectId, ref: 'Genre' }]
-  }
-);
+const BookSchema: Schema<IBook> = new Schema({
+  title: { type: String, required: true },
+  author: { type: Schema.Types.ObjectId, ref: "Author", required: true },
+  summary: { type: String, required: true },
+  isbn: { type: String, required: true },
+  genre: [{ type: Schema.Types.ObjectId, ref: "Genre" }],
+});
 
 /**
- * the function retrieves all books with author information 
+ * The function to get a book by ID.
+ * It uses the mongoose query to find a book by ID
+ * and populates the author and genre fields.
+ * @param id of a book
+ * @returns a promise of the book or null.
+ */
+BookSchema.statics.getBook = async function (
+  id: string
+): Promise<IBook | null> {
+  return this.findById(id).populate("author").populate("genre").exec();
+};
+
+/**
+ * the function retrieves all books with author information
  * in a sorted order if specified.
  * @param projection the fields to be selected.
  * @param sortOpts an optional parameter to sort the books.
  * @returns a promise of the books or an empty array.
  */
-BookSchema.statics.getAllBooksWithAuthors = async function (projection: string, sortOpts?: { [key: string]: 1 | -1 }): Promise<IBook[]> {
-  if(sortOpts) {
-    return Book.find({}, projection)
-    .sort(sortOpts)
-    .populate('author');
+BookSchema.statics.getAllBooksWithAuthors = async function (
+  projection: string,
+  sortOpts?: { [key: string]: 1 | -1 }
+): Promise<IBook[]> {
+  if (sortOpts) {
+    return Book.find({}, projection).sort(sortOpts).populate("author");
   }
-  return Book.find({}, projection).populate('author');
-}
+  return Book.find({}, projection).populate("author");
+};
 
 /**
  * retrieves the count of books in the collection based on an optional filter.
  * @param filter the filter object to be applied based on which the count will be performed.
  * @returns a promise of the count.
  */
-BookSchema.statics.getBookCount = async function (filter?: FilterQuery<IBook>): Promise<number> {
+BookSchema.statics.getBookCount = async function (
+  filter?: FilterQuery<IBook>
+): Promise<number> {
   return this.countDocuments(filter || {});
-}
+};
 
 /**
  * retrieves an existing author by name and an existing genre by name,
  * and saves a new book in this collection with the provided title, summary, and ISBN.
- * @param author_family_name 
- * @param author_first_name 
- * @param genre_name 
- * @param title 
+ * @param author_family_name
+ * @param author_first_name
+ * @param genre_name
+ * @param title
  * @returns tne book object that has been saved.
  */
-BookSchema.methods.saveBookOfExistingAuthorAndGenre = async function (author_family_name: string, author_first_name: string, genre_name: string, title: string): Promise<IBook> {
-  const authorId = await Author.getAuthorIdByName(author_family_name, author_first_name);
+BookSchema.methods.saveBookOfExistingAuthorAndGenre = async function (
+  author_family_name: string,
+  author_first_name: string,
+  genre_name: string,
+  title: string
+): Promise<IBook> {
+  const authorId = await Author.getAuthorIdByName(
+    author_family_name,
+    author_first_name
+  );
   const genreId = await Genre.getGenreIdByName(genre_name);
-  if(!authorId || !genreId) {
-    throw new Error('Author or genre not found');
+  if (!authorId || !genreId) {
+    throw new Error("Author or genre not found");
   }
   this.title = title;
-  this.summary = 'Demo Summary to be updated later';
-  this.isbn = 'ISBN2022';
+  this.summary = "Demo Summary to be updated later";
+  this.isbn = "ISBN2022";
   this.author = authorId;
   this.genre = [genreId];
-  return await this.save();  
-}
+  return await this.save();
+};
 
 /**
  * Compile the schema into a model and export it.
- * The model is instantiated with the IBook interface and 
- * the IBookModel interface. This is to ensure that the model 
- * has both the instance methods and static methods defined 
+ * The model is instantiated with the IBook interface and
+ * the IBookModel interface. This is to ensure that the model
+ * has both the instance methods and static methods defined
  * in the respective interfaces.
  */
-const Book = mongoose.model<IBook, IBookModel>('Book', BookSchema);
+const Book = mongoose.model<IBook, IBookModel>("Book", BookSchema);
+// The first type argument <IBook> ensures that individual book documents conform to the IBook interface.
+// The second type argument <IBookModel> ensures that the model itself supports the static methods defined in IBookModel.
 export default Book;

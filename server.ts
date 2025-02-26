@@ -1,11 +1,12 @@
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import homeRouter from './pages/home';
-import availableRouter from './pages/books_status';
-import bookRouter from './pages/books';
-import authorRouter from './pages/authors';
-import createBookRouter from './pages/create_book';
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import homeRouter from "./pages/home";
+import availableRouter from "./pages/books_status";
+import bookRouter from "./pages/books";
+import authorRouter from "./pages/authors";
+import createBookRouter from "./pages/create_book";
+import bookDetailsRouter from "./pages/book_details";
 
 // Create express app
 const app = express();
@@ -16,15 +17,15 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
 
-const mongoDB = 'mongodb://127.0.0.1:27017/my_library_db';
+const mongoDB = "mongodb://127.0.0.1:27017/my_library_db";
 mongoose.connect(mongoDB);
 const db = mongoose.connection;
 
 // Bind database connection to error event (to get notification of connection errors)
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.on("error", console.error.bind(console, "MongoDB connection error:"));
 // when successfully connected log a message
-db.on('connected', () => {
-  console.log('Connected to database');
+db.on("connected", () => {
+  console.log("Connected to database");
 });
 
 /**
@@ -36,12 +37,14 @@ db.on('connected', () => {
 app.use(cors());
 
 // setup the router middleware for this server
-app.use('/home', homeRouter);
+app.use("/home", homeRouter);
 
-app.use('/available', availableRouter);
+app.use("/available", availableRouter);
 
-app.use('/books', bookRouter);
+app.use("/books", bookRouter);
 
-app.use('/authors', authorRouter);
+app.use("/authors", authorRouter);
 
-app.use('/newbook', createBookRouter);
+app.use("/newbook", createBookRouter);
+
+app.use("/book_dtls", bookDetailsRouter);
